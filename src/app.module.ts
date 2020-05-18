@@ -1,30 +1,41 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Module, Global } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
-import { UserModule } from './users/user.module';
-import { MongooseModule } from '@nestjs/mongoose';
-
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import config from './config/app';
+import { MongooseModule } from '@nestjs/mongoose';
+import { JwtModule } from '@nestjs/jwt';
+import { JwtStrategy } from './shared/jwt.strategy';
+import { UserModule } from './users/user.module';
+import { AuthModule } from './auth/auth.module';
+import { GameGateway } from './game-gateway/game-gateway';
+import { CardsModule } from './cards/cards.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      load: [config],
-    }),
+    ConfigModule.forRoot({ isGlobal: true, load: [config] }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        uri:
-          'mongodb+srv://csantanderv:J7tB5ZxJ0L0tSFR3@cluster0-dwjk1.mongodb.net/test?retryWrites=true&w=majority',
+        uri: configService.get('mongoURI'),
       }),
       inject: [ConfigService],
     }),
-    AuthModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get('jwtSecret'),
+        signOptions: {
+          expiresIn: configService.get('jwtExpiration'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     UserModule,
+    AuthModule,
+    CardsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, JwtStrategy, GameGateway],
 })
 export class AppModule {}

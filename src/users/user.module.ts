@@ -1,18 +1,29 @@
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
-import { MongooseModule } from '@nestjs/mongoose';
+//import { MongooseModule } from '@nestjs/mongoose';
 import { UserController } from './user.controller';
-import { UserSchema } from '../schemas/user.schema';
-import { ConfigModule } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
+import { UserSchema } from './schemas/user.schema';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule, JwtService } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
 
+//TODO: Resolver valores en duro obtenidos desde el archivo de configuracion
 @Module({
   imports: [
-    ConfigModule,
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
-    JwtModule.register({ secret: 'pruebatoken' }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get('jwtSecret'),
+        signOptions: {
+          expiresIn: configService.get('jwtExpiration'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
   ],
   providers: [UserService],
   controllers: [UserController],
+  exports: [UserService],
 })
 export class UserModule {}
