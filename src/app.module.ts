@@ -8,8 +8,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './shared/jwt.strategy';
 import { UserModule } from './users/user.module';
 import { AuthModule } from './auth/auth.module';
-import { GameGateway } from './game-gateway/game-gateway';
 import { CardsModule } from './cards/cards.module';
+import { GameServerModule } from './game-server/game-server.module';
 
 @Module({
   imports: [
@@ -34,8 +34,9 @@ import { CardsModule } from './cards/cards.module';
     UserModule,
     AuthModule,
     CardsModule,
+    GameServerModule,
   ],
   controllers: [AppController],
-  providers: [AppService, JwtStrategy, GameGateway],
+  providers: [AppService, JwtStrategy],
 })
 export class AppModule {}

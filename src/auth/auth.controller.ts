@@ -17,7 +17,7 @@ export class AuthController {
   @UseGuards(AuthGuard())
   @Get()
   async getUser(@Request() req): Promise<any> {
-    const user = this.authService.getUserById(req.user.id);
+    const user = this.authService.getUserById(req.user.user.id);
     return user;
   }
 
