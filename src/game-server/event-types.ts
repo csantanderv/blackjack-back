@@ -1,4 +1,4 @@
-export enum ActionTypes {
+export enum EventTypes {
   Message = 'message',
   PlayerConnected = '[Socket] Player Connected',
   BanlConnected = '[Socket] Bank Connected',
@@ -6,4 +6,5 @@ export enum ActionTypes {
   Connected = '[Connected] Connected',
   Disconnected = '[Disconnected] Disconnected',
   Logout = '[Logout] Logout',
+  SetPlayers = '[SetPlayers] SetPlayers',
 }
