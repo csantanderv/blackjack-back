@@ -7,4 +7,7 @@ export enum EventTypes {
   Disconnected = '[Disconnected] Disconnected',
   Logout = '[Logout] Logout',
   SetPlayers = '[SetPlayers] SetPlayers',
+  PlayerBet = '[PlayerBet] PlayerBet',
+  NewGame = '[NewGame] NewGame',
+  SetBank = '[SetBank] SetBank',
 }
