@@ -52,6 +52,7 @@ export class GameGateway implements OnGatewayInit {
       );
     }
 
+    this.server.emit(EventTypes.SetBank, this.bank);
     this.server.emit(EventTypes.SetPlayers, this.players);
     this.server.emit(EventTypes.PlayerConnected, playerDto);
     client.emit(EventTypes.Connected, 'Se encuentra conectado');
@@ -108,6 +109,25 @@ export class GameGateway implements OnGatewayInit {
       this.players = players;
       this.server.emit(EventTypes.SetPlayers, this.players);
     }
+  }
+
+  @SubscribeMessage(EventTypes.BankHit)
+  async handleBankHit(client: Socket, data: any) {
+    const bank = { ...this.bank };
+    let showCard = false;
+    bank.cards.map(card => {
+      if (card.hidden) {
+        card.hidden = false;
+        showCard = true;
+      }
+    });
+
+    if (!showCard) {
+      const newCard = await this.cardsService.getCard(this.cardDeck.deck_id);
+      bank.cards.push({ card: newCard.code, hidden: false });
+    }
+    this.bank = bank;
+    this.server.emit(EventTypes.SetBank, this.bank);
   }
 
   @SubscribeMessage(EventTypes.PlayerStand)
