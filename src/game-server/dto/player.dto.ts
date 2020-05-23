@@ -11,6 +11,8 @@ export class PlayerDto {
   playing: boolean;
   totalAmountLost: number;
   betAmount: number;
+  hiting: boolean;
+  standing: boolean;
   currentResult: 'LOSER' | 'WINNER' | 'PLAYING' | undefined | string;
   cards: CarType[];
 }

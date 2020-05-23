@@ -3,8 +3,6 @@ import {
   WebSocketGateway,
   OnGatewayInit,
   WebSocketServer,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { EventTypes } from './event-types';
@@ -38,6 +36,8 @@ export class GameGateway implements OnGatewayInit {
     playerDto.betAmount = 0;
     playerDto.playing = true;
     playerDto.cards = [];
+    playerDto.hiting = false;
+    playerDto.standing = false;
     playerDto.idSocket = client.id;
 
     if (profile === 'BANK') {
@@ -79,14 +79,62 @@ export class GameGateway implements OnGatewayInit {
     this.handleDisconnect(client);
   }
 
+  @SubscribeMessage(EventTypes.GiveCard)
+  async handleGiveCard(client: Socket, data: any) {
+    if (data) {
+      const players = [...this.players];
+      const card = await this.cardsService.getCard(this.cardDeck.deck_id);
+      players.map(player => {
+        if (player.id === data.id) {
+          player.hiting = false;
+          player.cards.push({ card: card.code, hidden: false });
+        }
+      });
+      this.players = players;
+      this.server.emit(EventTypes.SetPlayers, this.players);
+    }
+  }
+
+  @SubscribeMessage(EventTypes.PlayerHit)
+  handlePlayerHit(client: Socket, data: any) {
+    if (data) {
+      const players = [...this.players];
+      players.map(player => {
+        if (player.idSocket === client.id) {
+          player.hiting = true;
+          player.standing = false;
+        }
+      });
+      this.players = players;
+      this.server.emit(EventTypes.SetPlayers, this.players);
+    }
+  }
+
+  @SubscribeMessage(EventTypes.PlayerStand)
+  handlePlayerStand(client: Socket, data: any) {
+    if (data) {
+      const players = [...this.players];
+      players.map(player => {
+        if (player.idSocket === client.id) {
+          player.standing = true;
+          player.hiting = false;
+        }
+      });
+      this.players = players;
+      this.server.emit(EventTypes.SetPlayers, this.players);
+    }
+  }
+
   @SubscribeMessage(EventTypes.PlayerBet)
   handlePlayerBet(client: Socket, data: any) {
     if (data) {
-      this.players.map(player => {
+      const players = [...this.players];
+      players.map(player => {
         if (player.idSocket === client.id) {
           player.betAmount = data.betAmount;
         }
       });
+      this.players = players;
       this.server.emit(EventTypes.SetPlayers, this.players);
     }
   }

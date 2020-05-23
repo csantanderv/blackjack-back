@@ -10,4 +10,7 @@ export enum EventTypes {
   PlayerBet = '[PlayerBet] PlayerBet',
   NewGame = '[NewGame] NewGame',
   SetBank = '[SetBank] SetBank',
+  PlayerHit = '[PlayerHit] PlayerHit',
+  PlayerStand = '[PlayerStand] PlayerStand',
+  GiveCard = '[GiveCard] GiveCard',
 }
