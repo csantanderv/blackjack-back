@@ -9,12 +9,13 @@ import { EventTypes } from './event-types';
 import { Server, Socket } from 'socket.io';
 import { PlayerDto } from './dto/player.dto';
 import { CardsService } from '../cards/cards.service';
+import CardValue from 'src/cards/constants/card-types';
 
 @WebSocketGateway({ namespace: 'gameEvents' })
 export class GameGateway implements OnGatewayInit {
   constructor(private readonly cardsService: CardsService) {}
   players: any[] = [];
-  bank = { id: '', cards: [] };
+  bank: PlayerDto = null; //= { id: '', cards: [], currentResult: 'PLAYING' };
   cardDeck = { deck_id: '' };
   @WebSocketServer()
   server: Server;
@@ -38,6 +39,7 @@ export class GameGateway implements OnGatewayInit {
     playerDto.cards = [];
     playerDto.hiting = false;
     playerDto.standing = false;
+    playerDto.currentResult = 'PLAYING';
     playerDto.idSocket = client.id;
 
     if (profile === 'BANK') {
@@ -61,7 +63,7 @@ export class GameGateway implements OnGatewayInit {
   handleDisconnect(client: Socket) {
     const { profile, name } = client.handshake.query;
     if (profile === 'BANK') {
-      this.bank = { id: '', cards: [] };
+      this.bank = null; //{ id: '', cards: [], currentResult: 'PLAYING' };
       this.logger.log(`Bank disconnected`);
     } else {
       this.players = this.players.filter(
@@ -84,6 +86,8 @@ export class GameGateway implements OnGatewayInit {
   async handleGiveCard(client: Socket, data: any) {
     if (data) {
       const players = [...this.players];
+      const { bank } = this;
+
       const card = await this.cardsService.getCard(this.cardDeck.deck_id);
       players.map(player => {
         if (player.id === data.id) {
@@ -91,7 +95,20 @@ export class GameGateway implements OnGatewayInit {
           player.cards.push({ card: card.code, hidden: false });
         }
       });
+
+      players.map(p => {
+        p.currentResult = this.checkPlayerResult(p);
+        if (p.currentResult === 'LOSER') {
+          p.totalAmountLost = p.totalAmountLost + p.betAmount;
+        }
+        if (p.currentResult === 'WINNER') {
+          bank.totalAmountLost = bank.totalAmountLost + p.betAmount;
+        }
+      });
+
       this.players = players;
+      this.bank = bank;
+      this.server.emit(EventTypes.SetBank, this.bank);
       this.server.emit(EventTypes.SetPlayers, this.players);
     }
   }
@@ -113,7 +130,7 @@ export class GameGateway implements OnGatewayInit {
 
   @SubscribeMessage(EventTypes.BankHit)
   async handleBankHit(client: Socket, data: any) {
-    const bank = { ...this.bank };
+    const { bank, players } = this;
     let showCard = false;
     bank.cards.map(card => {
       if (card.hidden) {
@@ -126,6 +143,8 @@ export class GameGateway implements OnGatewayInit {
       const newCard = await this.cardsService.getCard(this.cardDeck.deck_id);
       bank.cards.push({ card: newCard.code, hidden: false });
     }
+
+    bank.currentResult = this.checkPlayerResult(bank);
     this.bank = bank;
     this.server.emit(EventTypes.SetBank, this.bank);
   }
@@ -165,8 +184,9 @@ export class GameGateway implements OnGatewayInit {
     //TODO: Validar las cartas que quedan, hay que mandar un evento pa decir que se acabaron las cartas
     //TODO: Falta limpiar las cartas cada vez que se presiona play
     const players = [...this.players];
+    const { bank } = this;
 
-    if (players.length > 0 && this.bank.id !== '') {
+    if (players.length > 0 && this.bank) {
       if (this.cardDeck.deck_id === '') {
         const cardDeck = await this.cardsService.getCardDeck();
         this.cardDeck = cardDeck;
@@ -182,7 +202,8 @@ export class GameGateway implements OnGatewayInit {
         players[index].cards.push({ card: card.code, hidden: false });
       }
       let cardBank = cardsGame.cards[cardsGame.cards.length / 2 - 1];
-      this.bank.cards.push({ card: cardBank.code, hidden: false });
+      bank.cards.push({ card: cardBank.code, hidden: false });
+
       for (
         let index = cardsGame.cards.length / 2;
         index < cardsGame.cards.length - 1;
@@ -195,11 +216,56 @@ export class GameGateway implements OnGatewayInit {
         });
       }
       cardBank = cardsGame.cards[cardsGame.cards.length - 1];
-      this.bank.cards.push({ card: cardBank.code, hidden: true });
+      bank.cards.push({ card: cardBank.code, hidden: true });
+
+      players.forEach(p => {
+        p.currentResult = this.checkPlayerResult(p);
+        if (p.currentResult === 'LOSER') {
+          p.totalAmountLost = p.totalAmountLost + p.betAmount;
+        }
+        if (p.currentResult === 'WINNER') {
+          bank.totalAmountLost = bank.totalAmountLost - p.betAmount;
+        }
+      });
 
       this.players = players;
+      this.bank = bank;
+
       this.server.emit(EventTypes.SetPlayers, this.players);
+      this.server.emit(EventTypes.SetBank, this.bank);
       client.emit(EventTypes.SetBank, this.bank);
+    }
+  }
+
+  showCards(player: PlayerDto): any {
+    const { cards } = player;
+    cards.forEach(card => {
+      card.hidden = false;
+    });
+    return cards;
+  }
+
+  checkPlayerResult(player: PlayerDto): string {
+    const { cards } = player;
+
+    let total: number = 0;
+    cards.forEach(card => {
+      if (CardValue[card.card] === 11) {
+        total =
+          total +
+          (total + CardValue[card.card] > 21 ? 1 : CardValue[card.card]);
+      } else {
+        total = total + CardValue[card.card];
+      }
+    });
+
+    if (total === 21) {
+      return 'WINNER';
+    }
+    if (total < 21) {
+      return 'PLAYING';
+    } else {
+      return 'LOSER';
     }
   }
 }
