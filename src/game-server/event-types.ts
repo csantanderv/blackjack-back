@@ -14,4 +14,6 @@ export enum EventTypes {
   PlayerStand = '[PlayerStand] PlayerStand',
   GiveCard = '[GiveCard] GiveCard',
   BankHit = '[BankHit] BankHit',
+  GameStarted = '[GameStarted] GameStarted',
+  GameFinished = '[GameFinished] GameFinished',
 }

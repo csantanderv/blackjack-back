@@ -11,11 +11,14 @@ import { PlayerDto } from './dto/player.dto';
 import { CardsService } from '../cards/cards.service';
 import CardValue from 'src/cards/constants/card-types';
 
-@WebSocketGateway({ namespace: 'gameEvents' })
+@WebSocketGateway({
+  transports: ['websocket'],
+  pingTimeout: 60000,
+})
 export class GameGateway implements OnGatewayInit {
   constructor(private readonly cardsService: CardsService) {}
   players: any[] = [];
-  bank: PlayerDto = null; //= { id: '', cards: [], currentResult: 'PLAYING' };
+  bank: PlayerDto = null;
   cardDeck = { deck_id: '' };
   @WebSocketServer()
   server: Server;
@@ -233,6 +236,7 @@ export class GameGateway implements OnGatewayInit {
 
       this.server.emit(EventTypes.SetPlayers, this.players);
       this.server.emit(EventTypes.SetBank, this.bank);
+      this.server.emit(EventTypes.GameStarted);
       client.emit(EventTypes.SetBank, this.bank);
     }
   }
