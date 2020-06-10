@@ -181,6 +181,33 @@ export class GameGateway implements OnGatewayInit {
     }
   }
 
+  @SubscribeMessage(EventTypes.ResetGame)
+  handleResetGame(client: Socket, data: any) {
+    const players = [...this.players];
+    const { bank } = this;
+    players.map(player => {
+      player.playing = false;
+      player.cards = [];
+      player.hiting = false;
+      player.standing = false;
+      player.currentResult = 'PLAYING';
+    });
+
+    if (bank) {
+      bank.playing = false;
+      bank.cards = [];
+      bank.hiting = false;
+      bank.standing = false;
+      bank.currentResult = 'PLAYING';
+    }
+
+    this.players = players;
+    this.bank = bank;
+    this.server.emit(EventTypes.SetBank, this.bank);
+    this.server.emit(EventTypes.SetPlayers, this.players);
+    this.server.emit(EventTypes.GameFinished);
+  }
+
   @SubscribeMessage(EventTypes.NewGame)
   async handleNewGame(client: Socket) {
     //TODO: Quizás validar que sea el banco solamente.

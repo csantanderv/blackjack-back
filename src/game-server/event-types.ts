@@ -16,4 +16,5 @@ export enum EventTypes {
   BankHit = '[BankHit] BankHit',
   GameStarted = '[GameStarted] GameStarted',
   GameFinished = '[GameFinished] GameFinished',
+  ResetGame = '[ResetGame] ResetGame',
 }
