@@ -190,6 +190,7 @@ export class GameGateway implements OnGatewayInit {
       player.cards = [];
       player.hiting = false;
       player.standing = false;
+      player.betAmount = 0;
       player.currentResult = 'PLAYING';
     });
 
@@ -198,6 +199,7 @@ export class GameGateway implements OnGatewayInit {
       bank.cards = [];
       bank.hiting = false;
       bank.standing = false;
+      bank.betAmount = 0;
       bank.currentResult = 'PLAYING';
     }
 
