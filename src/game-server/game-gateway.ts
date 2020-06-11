@@ -9,7 +9,7 @@ import { EventTypes } from './event-types';
 import { Server, Socket } from 'socket.io';
 import { PlayerDto } from './dto/player.dto';
 import { CardsService } from '../cards/cards.service';
-import CardValue from 'src/cards/constants/card-types';
+import { CardValue, GameRules } from '../cards/constants/game-constants';
 
 @WebSocketGateway({
   transports: ['websocket'],
@@ -37,6 +37,7 @@ export class GameGateway implements OnGatewayInit {
     playerDto.profile = profile;
     playerDto.playing = false;
     playerDto.totalAmountLost = 0;
+    playerDto.totalAmountWin = 0;
     playerDto.betAmount = 0;
     playerDto.playing = true;
     playerDto.cards = [];
@@ -92,6 +93,7 @@ export class GameGateway implements OnGatewayInit {
       const { bank } = this;
 
       const card = await this.cardsService.getCard(this.cardDeck.deck_id);
+      this.logger.log(`Carta obtenida player:` + card.code);
       players.map(player => {
         if (player.id === data.id) {
           player.hiting = false;
@@ -100,11 +102,13 @@ export class GameGateway implements OnGatewayInit {
       });
 
       players.map(p => {
-        p.currentResult = this.checkPlayerResult(p);
+        p.currentResult = this.checkPlayerResult(p).currentResult;
         if (p.currentResult === 'LOSER') {
           p.totalAmountLost = p.totalAmountLost + p.betAmount;
+          bank.totalAmountWin = bank.totalAmountWin + p.betAmount;
         }
         if (p.currentResult === 'WINNER') {
+          p.totalAmountWin = p.totalAmountWin + p.betAmount;
           bank.totalAmountLost = bank.totalAmountLost + p.betAmount;
         }
       });
@@ -133,7 +137,8 @@ export class GameGateway implements OnGatewayInit {
 
   @SubscribeMessage(EventTypes.BankHit)
   async handleBankHit(client: Socket, data: any) {
-    const { bank, players } = this;
+    const players = [...this.players];
+    const { bank } = this;
     let showCard = false;
     bank.cards.map(card => {
       if (card.hidden) {
@@ -144,12 +149,55 @@ export class GameGateway implements OnGatewayInit {
 
     if (!showCard) {
       const newCard = await this.cardsService.getCard(this.cardDeck.deck_id);
+      this.logger.log(`Carta obtenida bank:` + newCard.code);
       bank.cards.push({ card: newCard.code, hidden: false });
     }
+    const checkBank = this.checkPlayerResult(bank);
 
-    bank.currentResult = this.checkPlayerResult(bank);
+    if (
+      checkBank.currentResult === 'PLAYING' &&
+      checkBank.total >= GameRules.LimitBank
+    ) {
+      players.forEach(p => {
+        const checkPlayer = this.checkPlayerResult(p);
+        if (checkPlayer.currentResult === 'PLAYING') {
+          if (checkPlayer.total > checkBank.total) {
+            p.currentResult = 'WINNER';
+            p.totalAmountWin = p.totalAmountWin + p.betAmount;
+          } else {
+            p.currentResult = 'LOSER';
+            p.totalAmountLost = p.totalAmountLost + p.betAmount;
+          }
+        }
+      });
+    }
+
+    if (checkBank.currentResult === 'WINNER') {
+      players.forEach(p => {
+        const checkPlayer = this.checkPlayerResult(p);
+        if (checkPlayer.currentResult === 'PLAYING') {
+          p.currentResult = 'LOSER';
+          p.totalAmountLost = p.totalAmountLost + p.betAmount;
+          bank.totalAmountWin = bank.totalAmountWin + p.betAmount;
+        }
+      });
+    }
+
+    if (checkBank.currentResult === 'LOSER') {
+      players.forEach(p => {
+        const checkPlayer = this.checkPlayerResult(p);
+        if (checkPlayer.currentResult === 'PLAYING') {
+          p.currentResult = 'WINNER';
+          p.totalAmountWin = p.totalAmountWin + p.betAmount;
+          bank.totalAmountLost = bank.totalAmountLost + p.betAmount;
+        }
+      });
+    }
+
+    this.players = players;
     this.bank = bank;
     this.server.emit(EventTypes.SetBank, this.bank);
+    this.server.emit(EventTypes.SetPlayers, this.players);
   }
 
   @SubscribeMessage(EventTypes.PlayerStand)
@@ -212,9 +260,8 @@ export class GameGateway implements OnGatewayInit {
 
   @SubscribeMessage(EventTypes.NewGame)
   async handleNewGame(client: Socket) {
-    //TODO: Quizás validar que sea el banco solamente.
     //TODO: Validar las cartas que quedan, hay que mandar un evento pa decir que se acabaron las cartas
-    //TODO: Falta limpiar las cartas cada vez que se presiona play
+    //TODO: Cuando algún jugador gane o pierda al repartir las cartas, hay que gestionar qué mierda hacer
     const players = [...this.players];
     const { bank } = this;
 
@@ -251,12 +298,12 @@ export class GameGateway implements OnGatewayInit {
       bank.cards.push({ card: cardBank.code, hidden: true });
 
       players.forEach(p => {
-        p.currentResult = this.checkPlayerResult(p);
+        p.currentResult = this.checkPlayerResult(p).currentResult;
         if (p.currentResult === 'LOSER') {
           p.totalAmountLost = p.totalAmountLost + p.betAmount;
         }
         if (p.currentResult === 'WINNER') {
-          bank.totalAmountLost = bank.totalAmountLost - p.betAmount;
+          p.totalAmountWin = p.totalAmountWin + p.betAmount;
         }
       });
 
@@ -270,35 +317,28 @@ export class GameGateway implements OnGatewayInit {
     }
   }
 
-  showCards(player: PlayerDto): any {
-    const { cards } = player;
-    cards.forEach(card => {
-      card.hidden = false;
-    });
-    return cards;
-  }
-
-  checkPlayerResult(player: PlayerDto): string {
+  checkPlayerResult(
+    player: PlayerDto,
+  ): { total: number; currentResult: string } {
     const { cards } = player;
 
     let total: number = 0;
     cards.forEach(card => {
+      total = total + CardValue[card.card];
       if (CardValue[card.card] === 11) {
-        total =
-          total +
-          (total + CardValue[card.card] > 21 ? 1 : CardValue[card.card]);
-      } else {
-        total = total + CardValue[card.card];
+        total = total - 10; //+ (total + CardValue[card.card] > 21 ? 1 : CardValue[card.card]);
       }
     });
-
+    let result = '';
     if (total === 21) {
-      return 'WINNER';
+      result = 'WINNER';
     }
     if (total < 21) {
-      return 'PLAYING';
+      result = 'PLAYING';
     } else {
-      return 'LOSER';
+      result = 'LOSER';
     }
+
+    return { total: total, currentResult: result };
   }
 }

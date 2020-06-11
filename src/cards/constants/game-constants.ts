@@ -1,4 +1,4 @@
-const CardValue = {
+export const CardValue = {
   '0C': 10,
   '0S': 10,
   '2H': 2,
@@ -53,4 +53,6 @@ const CardValue = {
   QH: 10,
 };
 
-export default CardValue;
+export const GameRules = {
+  LimitBank: 16,
+};

@@ -10,6 +10,7 @@ export class PlayerDto {
   profile: string;
   playing: boolean;
   totalAmountLost: number;
+  totalAmountWin: number;
   betAmount: number;
   hiting: boolean;
   standing: boolean;
