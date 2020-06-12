@@ -153,23 +153,36 @@ export class GameGateway implements OnGatewayInit {
       bank.cards.push({ card: newCard.code, hidden: false });
     }
     const checkBank = this.checkPlayerResult(bank);
+    bank.currentResult = checkBank.currentResult;
 
     if (
       checkBank.currentResult === 'PLAYING' &&
       checkBank.total >= GameRules.LimitBank
     ) {
+      let totalWinner = 0;
+      let totalLoser = 0;
       players.forEach(p => {
         const checkPlayer = this.checkPlayerResult(p);
         if (checkPlayer.currentResult === 'PLAYING') {
           if (checkPlayer.total > checkBank.total) {
             p.currentResult = 'WINNER';
             p.totalAmountWin = p.totalAmountWin + p.betAmount;
+            bank.totalAmountLost = bank.totalAmountLost + p.betAmount;
+            totalWinner++;
           } else {
             p.currentResult = 'LOSER';
             p.totalAmountLost = p.totalAmountLost + p.betAmount;
+            bank.totalAmountWin = bank.totalAmountWin + p.betAmount;
+            totalLoser++;
           }
         }
       });
+
+      if (totalWinner > totalLoser) {
+        bank.currentResult = 'LOSER';
+      } else {
+        bank.currentResult = 'WINNER';
+      }
     }
 
     if (checkBank.currentResult === 'WINNER') {
