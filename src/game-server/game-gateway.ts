@@ -102,7 +102,9 @@ export class GameGateway implements OnGatewayInit {
       });
 
       players.map(p => {
-        p.currentResult = this.checkPlayerResult(p).currentResult;
+        const checkResult = this.checkPlayerResult(p);
+        p.totalCards = checkResult.total;
+        p.currentResult = checkResult.currentResult;
         if (p.currentResult === 'LOSER') {
           p.totalAmountLost = p.totalAmountLost + p.betAmount;
           bank.totalAmountWin = bank.totalAmountWin + p.betAmount;
@@ -153,14 +155,15 @@ export class GameGateway implements OnGatewayInit {
       bank.cards.push({ card: newCard.code, hidden: false });
     }
     const checkBank = this.checkPlayerResult(bank);
+    bank.totalCards = checkBank.total;
     bank.currentResult = checkBank.currentResult;
 
     if (
       checkBank.currentResult === 'PLAYING' &&
       checkBank.total >= GameRules.LimitBank
     ) {
-      let totalWinner = 0;
-      let totalLoser = 0;
+      let totalWinners = 0;
+      let totalLosers = 0;
       players.forEach(p => {
         const checkPlayer = this.checkPlayerResult(p);
         if (checkPlayer.currentResult === 'PLAYING') {
@@ -168,17 +171,17 @@ export class GameGateway implements OnGatewayInit {
             p.currentResult = 'WINNER';
             p.totalAmountWin = p.totalAmountWin + p.betAmount;
             bank.totalAmountLost = bank.totalAmountLost + p.betAmount;
-            totalWinner++;
+            totalWinners++;
           } else {
             p.currentResult = 'LOSER';
             p.totalAmountLost = p.totalAmountLost + p.betAmount;
             bank.totalAmountWin = bank.totalAmountWin + p.betAmount;
-            totalLoser++;
+            totalLosers++;
           }
         }
       });
 
-      if (totalWinner > totalLoser) {
+      if (totalWinners > totalLosers) {
         bank.currentResult = 'LOSER';
       } else {
         bank.currentResult = 'WINNER';
@@ -291,9 +294,11 @@ export class GameGateway implements OnGatewayInit {
 
       for (let index = 0; index < cardsGame.cards.length / 2 - 1; index++) {
         const card = cardsGame.cards[index];
+        this.logger.log(`Jugador - Carta:${card.code}`);
         players[index].cards.push({ card: card.code, hidden: false });
       }
       let cardBank = cardsGame.cards[cardsGame.cards.length / 2 - 1];
+      this.logger.log(`Banco Carta:${cardBank.code}`);
       bank.cards.push({ card: cardBank.code, hidden: false });
 
       for (
@@ -302,16 +307,20 @@ export class GameGateway implements OnGatewayInit {
         index++
       ) {
         const card = cardsGame.cards[index];
+        this.logger.log(`Jugador - Carta :${card.code}`);
         players[index - cardsGame.cards.length / 2].cards.push({
           card: card.code,
           hidden: false,
         });
       }
       cardBank = cardsGame.cards[cardsGame.cards.length - 1];
+      this.logger.log(`Banco Carta:${cardBank.code}`);
       bank.cards.push({ card: cardBank.code, hidden: true });
 
       players.forEach(p => {
-        p.currentResult = this.checkPlayerResult(p).currentResult;
+        const checkResult = this.checkPlayerResult(p);
+        p.currentResult = checkResult.currentResult;
+        p.totalCards = checkResult.total;
         if (p.currentResult === 'LOSER') {
           p.totalAmountLost = p.totalAmountLost + p.betAmount;
         }
@@ -319,6 +328,12 @@ export class GameGateway implements OnGatewayInit {
           p.totalAmountWin = p.totalAmountWin + p.betAmount;
         }
       });
+
+      if (bank) {
+        const checkBank = this.checkPlayerResult(bank);
+        bank.totalCards = checkBank.total;
+        bank.currentResult = checkBank.currentResult;
+      }
 
       this.players = players;
       this.bank = bank;
@@ -337,8 +352,11 @@ export class GameGateway implements OnGatewayInit {
 
     let total: number = 0;
     cards.forEach(card => {
-      total = total + CardValue[card.card];
-      if (CardValue[card.card] === 11) {
+      if (!card.hidden) {
+        total = total + CardValue[card.card];
+      }
+
+      if (!card.hidden && CardValue[card.card] === 11) {
         total = total - 10; //+ (total + CardValue[card.card] > 21 ? 1 : CardValue[card.card]);
       }
     });

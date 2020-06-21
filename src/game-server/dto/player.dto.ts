@@ -11,6 +11,7 @@ export class PlayerDto {
   playing: boolean;
   totalAmountLost: number;
   totalAmountWin: number;
+  totalCards: number;
   betAmount: number;
   hiting: boolean;
   standing: boolean;
