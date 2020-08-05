@@ -19,7 +19,7 @@ export class GameGateway implements OnGatewayInit {
   constructor(private readonly cardsService: CardsService) {}
   players: any[] = [];
   bank: PlayerDto = null;
-  cardDeck = { deck_id: '' };
+  cardDeck = { deck_id: '', remaining: 0 };
   @WebSocketServer()
   server: Server;
   private logger: Logger = new Logger('GameGateway');
@@ -292,6 +292,10 @@ export class GameGateway implements OnGatewayInit {
         totalCards,
       );
 
+      if (this.cardDeck) {
+        this.cardDeck.remaining = cardsGame.remaining;
+      }
+
       for (let index = 0; index < cardsGame.cards.length / 2 - 1; index++) {
         const card = cardsGame.cards[index];
         this.logger.log(`Jugador - Carta:${card.code}`);
@@ -357,7 +361,7 @@ export class GameGateway implements OnGatewayInit {
       }
 
       if (!card.hidden && CardValue[card.card] === 11) {
-        total = total - 10; //+ (total + CardValue[card.card] > 21 ? 1 : CardValue[card.card]);
+        total = total - 10;
       }
     });
     let result = '';

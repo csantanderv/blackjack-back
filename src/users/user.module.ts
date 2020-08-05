@@ -1,16 +1,18 @@
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
-//import { MongooseModule } from '@nestjs/mongoose';
 import { UserController } from './user.controller';
 import { UserSchema } from './schemas/user.schema';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { GameSchema } from './schemas/game.schema';
+import { UserGameSchema } from './schemas/user-game.schema';
 
-//TODO: Resolver valores en duro obtenidos desde el archivo de configuracion
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: 'Game', schema: GameSchema }]),
+    MongooseModule.forFeature([{ name: 'UserGame', schema: UserGameSchema }]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
