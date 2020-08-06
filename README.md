@@ -37,7 +37,7 @@ cardApi=https://deckofcardsapi.com/api/deck
 
 ## Authors
 
-- Carlos Santander - Full Stack Developer - [PurpleBooth](https://github.com/csantanderv)
+- Carlos Santander - Full Stack Developer.
 
 ## License
 
