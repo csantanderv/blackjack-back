@@ -19,6 +19,7 @@ export class GameGateway implements OnGatewayInit {
   constructor(private readonly cardsService: CardsService) {}
   players: any[] = [];
   bank: PlayerDto = null;
+  // eslint-disable-next-line @typescript-eslint/camelcase
   cardDeck = { deck_id: '', remaining: 0 };
   @WebSocketServer()
   server: Server;
@@ -354,7 +355,7 @@ export class GameGateway implements OnGatewayInit {
   ): { total: number; currentResult: string } {
     const { cards } = player;
 
-    let total: number = 0;
+    let total = 0;
     cards.forEach(card => {
       if (!card.hidden) {
         total = total + CardValue[card.card];

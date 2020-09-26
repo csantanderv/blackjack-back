@@ -1,4 +1,4 @@
-import { Module, Global } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -10,6 +10,8 @@ import { UserModule } from './users/user.module';
 import { AuthModule } from './auth/auth.module';
 import { CardsModule } from './cards/cards.module';
 import { GameServerModule } from './game-server/game-server.module';
+import { ScoreModule } from './score/score.module';
+import { GraphQLModule } from '@nestjs/graphql';
 
 @Module({
   imports: [
@@ -31,10 +33,15 @@ import { GameServerModule } from './game-server/game-server.module';
       }),
       inject: [ConfigService],
     }),
+    GraphQLModule.forRoot({
+      autoSchemaFile: 'schema.gql',
+      playground: true,
+    }),
     UserModule,
     AuthModule,
     CardsModule,
     GameServerModule,
+    ScoreModule,
   ],
   controllers: [AppController],
   providers: [AppService, JwtStrategy],
