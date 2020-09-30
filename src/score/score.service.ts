@@ -5,13 +5,12 @@ import { JwtService } from '@nestjs/jwt';
 import { IUser } from '../users/interfaces/user.interface';
 import { IGame } from './interfaces/game.interface';
 import { IUserGame } from './interfaces/user-game.interface';
+import { GameType } from './dto/game.dto';
 
 @Injectable()
 export class ScoreService {
   constructor(
-    @InjectModel('User') private userModel: Model<IUser>,
     @InjectModel('Game') private gameModel: Model<IGame>,
-    @InjectModel('UserGame') private userGameModel: Model<IUserGame>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -39,8 +38,8 @@ export class ScoreService {
     return updatedOne;
   }
 
-  async getGames(): Promise<IGame[]> {
-    return await this.gameModel.find();
+  async getGames(): Promise<GameType[]> {
+    return await this.gameModel.find().exec();
   }
 
   async newGame(): Promise<IGame> {

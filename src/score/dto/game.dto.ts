@@ -1,7 +1,9 @@
-import { ObjectType, Field } from 'type-graphql';
+import { Field, ID, ObjectType } from "@nestjs/graphql";
 
 @ObjectType()
 export class GameType {
+  @Field(()=> ID)
+  readonly id?: string;
   @Field()
   readonly dateGame: Date;
   @Field()
